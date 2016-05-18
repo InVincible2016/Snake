@@ -44,9 +44,10 @@ public class Snake extends JComponent implements ActionListener {
 	private int Eaten;
 	private int Preset_GameSpeed, CurrentGameSpeed;
 
-	public boolean paused, over;
+	public boolean paused, over, falseStart = false;
 	private boolean ActionUpdated;
 	public boolean GameStarted;
+	
 
 	private JFrame jframe;
 	Timer timer;
@@ -82,24 +83,27 @@ public class Snake extends JComponent implements ActionListener {
 
 	private boolean HitBoundary() {
 		// Check if snake hits boundary;
+		/*
 		if (head.x < Grid_X || head.x + scal > Grid_Width + Grid_X || head.y < Grid_Y
 				|| head.y + scal > Grid_Height + Grid_Y) {
 			System.out.println("HitBoundary");
 			return true;
 		}
 		return false;
+		*/
+		return head.x < scal || head.x > (Grid_Width - scal) || head.y < 2 * scal || head.y > (Grid_Height - scal);
 	}
 
 	private boolean HitBody() {
 		// Check is snake hits itself;
-		if (SnakeBody.size() < 5) {// It's impossible that a snake hit itself
-									// with length less than 5;
-			return false;
-		}
-		for (int i = SnakeBody.size() - 3; i >= 0; i--) {
-			if (head.intersects(SnakeBody.get(i))) {
-				System.out.println("HitBody");
-				return true;
+		for (int i = 0; i < BodyLength - 2; i++) {		
+			if (head.getX() == SnakeBody.get(i).getX() && head.getY() == SnakeBody.get(i).getY()) {
+				if (falseStart == false) { // disables first collision on start up
+					falseStart = true;
+				}
+				else {
+					return true;
+				}
 			}
 		}
 		return false;
@@ -132,19 +136,23 @@ public class Snake extends JComponent implements ActionListener {
 			}
 			GenerateFood();
 		}
-		if (direction == 0 && !HitBoundary() && !HitBody()) {
-			head = new Rectangle(head.x, head.y - scal, scal, scal);
-
-		} else if (direction == 1 && !HitBoundary() && !HitBody()) {
-			head = new Rectangle(head.x, head.y + scal, scal, scal);
-
-		} else if (direction == 2 && !HitBoundary() && !HitBody()) {
-			head = new Rectangle(head.x - scal, head.y, scal, scal);
-
-		} else if (direction == 3 && !HitBoundary() && !HitBody()) {
-			head = new Rectangle(head.x + scal, head.y, scal, scal);
-
-		} else {
+		if (!HitBoundary() && !HitBody()) {	// check hit boundary + hit body bool
+			switch(direction) {
+				case 1:		// down
+					head = new Rectangle(head.x, head.y + scal, scal, scal);
+					break;
+				case 2:		// left
+					head = new Rectangle(head.x - scal, head.y, scal, scal);
+					break;
+				case 3:		// right
+					head = new Rectangle(head.x + scal, head.y, scal, scal);
+					break;
+				default:	// up
+					head = new Rectangle(head.x, head.y - scal, scal, scal);
+			}
+		}
+		else {
+			System.out.println("dead");
 			over = true;
 			ActionUpdated = true;
 			return;
@@ -221,52 +229,52 @@ public class Snake extends JComponent implements ActionListener {
 
 	private class MyKeyListener extends KeyAdapter {
 		public void keyPressed(KeyEvent e) {
-			// System.out.println("Key pressed");
 			int keyCode = e.getKeyCode();
 			if (GameStarted) {
-				if (keyCode == KeyEvent.VK_SPACE) {// Pause and un-pause.
-					if (paused == false) {
-						paused = true;
-					} else
-						paused = false;
-
-				}
-				if (keyCode == KeyEvent.VK_R) { // 'r' for Reset.
-					reset();
-					// System.out.println("Reset");
-				}
 				if (ActionUpdated == true) {// Wait and make sure the last
 											// action has been updated.
-					if (keyCode == KeyEvent.VK_UP) {
-						if (direction != 1 && direction != 0) {
-							direction = 0; // set to go up
-							ActionUpdated = false;
-						}
-					}
-					if (keyCode == KeyEvent.VK_DOWN) {
-
-						if (direction != 0 && direction != 1) {
-							direction = 1;// set to go down
-							ActionUpdated = false;
-						}
-					}
-					if (keyCode == KeyEvent.VK_LEFT) {
-						if (direction != 3 && direction != 2) {
-							direction = 2; // set to go left
-							ActionUpdated = false;
-						}
-					}
-					if (keyCode == KeyEvent.VK_RIGHT) {
-						if (direction != 3 && direction != 2) {
-							direction = 3;// set to go right
-							ActionUpdated = false;
-						}
+					switch (keyCode) {
+						case KeyEvent.VK_UP:
+							if (direction != 1 && direction != 0) {
+								direction = 0; // set to go up
+								ActionUpdated = false;
+							}
+							break;
+						case KeyEvent.VK_DOWN:
+							if (direction != 0 && direction != 1) {
+								direction = 1;// set to go down
+								ActionUpdated=false;
+							}
+							break;
+						case KeyEvent.VK_LEFT:
+							if (direction != 3 && direction != 2) {
+								direction = 2; // set to go left
+								ActionUpdated=false;	
+							}
+							break;
+						case KeyEvent.VK_RIGHT:
+							if (direction != 3 && direction != 2) {
+								direction = 3;// set to go right
+								ActionUpdated=false;
+							}
+							break;
+						case KeyEvent.VK_SPACE:
+							if (paused == false) {
+								paused = true;
+								break;
+							} 
+							else {
+								paused = false;
+								break;
+							}	
+						case KeyEvent.VK_R:
+							reset();
+							break;
 					}
 				}
 			} else if (keyCode == KeyEvent.VK_S) { // 's' for Start.
 				// System.out.println("Start");
 				GameStarted = true;
-
 			}
 		}
 	}
@@ -286,84 +294,105 @@ public class Snake extends JComponent implements ActionListener {
 																// nicer
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		if (GameStarted) {
-
-			// Draw food:
-			g2.setColor(Color.GREEN);//
-			g2.fillRect(food.x, food.y, food.width, food.height);
-
-			// Draw Snake:
-
-			g2.setColor(Color.RED);
-			for (int i = 0; i < SnakeBody.size(); i++) {
-				Rectangle temp = SnakeBody.get(i);
-				g2.fillRect(temp.x, temp.y, temp.width, temp.height);
-				// g2.drawString(Integer.toString(temp.x)+ " ,
-				// "+Integer.toString(temp.y), 700,400+(i*10));
-				// g2.drawString(Boolean.toString(over), 700,290);
-				// g2.drawString(Boolean.toString(paused), 700,300);
-			}
-
-			// Draw coordinate of head; For debugging purpose.
-			// g2.drawString(Integer.toString(head.x), 300, 300);
-			// g2.drawString(" , ", 350, 300);
-			// g2.drawString(Integer.toString(head.y), 400, 300);
-
-			// Draw Horizontal lines:
-			g2.setColor(Color.BLUE);
-			for (int i = 0; i <= Grid_Height; i += scal) {
-				g2.drawLine(Grid_X, Grid_Y + i, Grid_Width + Grid_X, i + Grid_Y);
-			}
-			// Draw Vertical lines:
-			for (int i = 0; i <= Grid_Width; i += scal) {// Draw Vertical lines
-				g2.drawLine(i + Grid_X, Grid_Y, i + Grid_X, Grid_Height + Grid_Y);
-			}
-			// Draw Game Data:
-			// g2.drawString(Integer.toString(direction), 700,300);
-			// for ()
-			// g2.drawString(Integer.toString(direction), 700,300);
-
-			g2.setColor(Color.RED);
-			g2.setFont(new Font(Font.SERIF, Font.BOLD, 15));
-
-			g2.drawString("Speed inscreases every 5", 615, 200);
-			g2.drawString("foods eaten.", 615, 215);
-			g2.drawString("Current Speed: " + Integer.toString(CurrentGameSpeed), 615, 230);
-			g2.drawString("Press key 'r' to start.", 615, 300);
+			// Draw
+			drawFood(g);
+			drawSnake(g);
+			drawLine(g);
+			drawGUI(g);
+			
 			if (over) {
-
-				g2.setColor(Color.RED);
-				g2.setFont(new Font(Font.SERIF, Font.BOLD, 40));
-				g2.drawString("Game Over", 150, 300);
-				g2.drawString("press 'r' to restart", 150, 350);
+				drawGUIDead(g);
 			}
 
 		} else {
 			g2.setBackground(Color.GRAY);
-			String Title = "Changlong Zhong's Snake";
-			String My_Userid = "User ID: Clzhong";
-			Font TitleFont = new Font(Font.SERIF, Font.BOLD, 40);
-			g2.setFont(TitleFont);
-			g2.setColor(Color.BLUE);
-			g2.drawString(Title, 150, 300);
-			Font TitleFont2 = new Font(Font.SANS_SERIF, Font.ITALIC, 30);
-			g2.setFont(TitleFont2);
-			g2.setColor(Color.BLUE);
-			g2.drawString(My_Userid, 200, 400);
-			Font InstructionFont = new Font(Font.SERIF, Font.PLAIN, 20);
-			String Instruction1 = " Use Arraw keys to control the snake";
-			String Instruction2 = " Press key 's' to start the game.";
-			g2.setFont(InstructionFont);
-			g2.setColor(Color.GRAY);
-			g2.drawString(Instruction1, 200, 480);
-			g2.drawString(Instruction2, 200, 510);
+			drawMenuScreen(g);
 		}
 	}
+	
+	public void drawFood(Graphics g) {
+		g.setColor(Color.GREEN);//
+		g.fillRect(food.x, food.y, food.width, food.height);
+	}
+	
+	public void drawSnake(Graphics g) {
+		g.setColor(Color.RED);
+		for (int i = 0; i < SnakeBody.size(); i++) {
+			Rectangle temp = SnakeBody.get(i);
+			g.fillRect(temp.x, temp.y, temp.width, temp.height);
+			// g2.drawString(Integer.toString(temp.x)+ " ,
+			// "+Integer.toString(temp.y), 700,400+(i*10));
+			// g2.drawString(Boolean.toString(over), 700,290);
+			// g2.drawString(Boolean.toString(paused), 700,300);
+		}
 
+		// Draw coordinate of head; For debugging purpose.
+		// g2.drawString(Integer.toString(head.x), 300, 300);
+		// g2.drawString(" , ", 350, 300);
+		// g2.drawString(Integer.toString(head.y), 400, 300);	
+	}
+	
+	public void drawLine(Graphics g) {
+		// Draw Horizontal lines:
+		g.setColor(Color.BLUE);
+		for (int i = 0; i <= Grid_Height; i += scal) {
+			g.drawLine(Grid_X, Grid_Y + i, Grid_Width + Grid_X, i + Grid_Y);
+		}
+		// Draw Vertical lines:
+		for (int i = 0; i <= Grid_Width; i += scal) {
+			g.drawLine(i + Grid_X, Grid_Y, i + Grid_X, Grid_Height + Grid_Y);
+		}
+	}
+	
+	public void drawGUI(Graphics g) {
+		String Title1 = "Speed inscreases every 5";
+		String Title2 = "foods eaten.";
+		String Title3 = "Current Speed: ";
+		String Title4 = "Press key 'r' to start.";
+		Font TitleFont = new Font(Font.SERIF, Font.BOLD, 15);
+		
+		g.setColor(Color.RED);
+		g.setFont(TitleFont);
+		g.drawString(Title1, 615, 200);
+		g.drawString(Title2, 615, 215);
+		g.drawString(Title3 + Integer.toString(CurrentGameSpeed), 615, 230);
+		g.drawString(Title4, 615, 300);
+	}
+	
+	public void drawGUIDead(Graphics g) {
+		String Title1 = "Game Over";
+		String Title2 = "press 'r' to restart";
+		Font TitleFont = new Font(Font.SERIF, Font.BOLD, 40);
+		
+		g.setColor(Color.RED);
+		g.setFont(TitleFont);
+		g.drawString(Title1, 150, 300);
+		g.drawString(Title2, 150, 350);
+	}
+
+	public void drawMenuScreen(Graphics g) {
+		String Title = "Changlong Zhong's Snake";
+		String My_Userid = "User ID: Clzhong";
+		String Instruction1 = " Use Arraw keys to control the snake";
+		String Instruction2 = " Press key 's' to start the game.";
+		Font TitleFont = new Font(Font.SERIF, Font.BOLD, 40);
+		Font TitleFont2 = new Font(Font.SANS_SERIF, Font.ITALIC, 30);
+		Font InstructionFont = new Font(Font.SERIF, Font.PLAIN, 20);
+
+		g.setFont(TitleFont);
+		g.setColor(Color.BLUE);
+		g.drawString(Title, 150, 300);
+		g.setFont(TitleFont2);
+		g.drawString(My_Userid, 200, 400);
+		g.setFont(InstructionFont);
+		g.setColor(Color.GRAY);
+		g.drawString(Instruction1, 200, 480);
+		g.drawString(Instruction2, 200, 510);
+	}
+	
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		// Render.
 		repaint();
-
 	}
-
 }
